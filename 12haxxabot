@@ -1,12 +1,10 @@
 import json
-import sqlalchemy
+import datetime
 import logging
 import telebot
 import smtplib
-import datetime
+import sqlalchemy
 import time
-
-
 
 from Bittrex import Bittrex
 from config_telegram import TOKEN, ALLOWED_IDS
@@ -16,7 +14,7 @@ from creds_2 import Bittrex_API_KEY, Bittrex_SECRET_KEY, GMAIL_USER, GMAIL_PASSW
 PAIRS = ['BTC_ETH', 'BTC_XRP', 'BTC_XEM', 'BTC_LTC', 'BTC_STR', 'BTC_BCN', 'BTC_DGB', 'BTC_ETC', 'BTC_SC', 'BTC_DOGE',
          'BTC_BTS', 'BTC_GNT', 'BTC_XMR', 'BTC_DASH', 'BTC_ARDR', 'BTC_STEEM', 'BTC_NXT', 'BTC_ZEC',
          'BTC_STRAT', 'BTC_DCR', 'BTC_NMC', 'BTC_MAID', 'BTC_BURST', 'BTC_GAME', 'BTC_FCT', 'BTC_LSK', 'BTC_FLO',
-         'BTC_CLAM', 'BTC_SYS', 'BTC_GNO', 'BTC_REP', 'BTC_RIC', 'BTC_XCP', 'BTC_PPC', 'BTC_AMP', 'BTC_SJCX', 'BTC_BNB',
+         'BTC_CLAM', 'BTC_SYS', 'BTC_GNO', 'BTC_REP', 'BTC_RIC', 'BTC_XCP', 'BTC_PPC', 'BTC_AMP', 'BTC_SJCX', 'BTC_LBC',
          'BTC_EXP', 'BTC_VTC', 'BTC_GRC', 'BTC_NAV', 'BTC_FLDC', 'BTC_POT', 'BTC_RADS', 'BTC_BELA', 'BTC_NAUT',
          'BTC_BTCD', 'BTC_XPM', 'BTC_NOTE', 'BTC_NXC', 'BTC_PINK', 'BTC_OMNI', 'BTC_VIA', 'BTC_XBC', 'BTC_NEOS',
          'BTC_PASC', 'BTC_BTM', 'BTC_SBD', 'BTC_VRC', 'BTC_BLK', 'BTC_BCY', 'BTC_XVC', 'BTC_HUC']
@@ -78,8 +76,8 @@ def connect_db(user, password, db, host='localhost', port=5432):
     """Returns a connection and a metadata object"""
     url = 'postgresql://{}:{}@{}:{}/{}'
     url = url.format(user, password, host, port, db)
-    con = xxaialchemy.create_engine(url, client_encoding='utf8')
-    meta = xxaialchemy.MetaData(bind=con, reflect=True)
+    con = sqlalchemy.create_engine(url, client_encoding='utf8')
+    meta = sqlalchemy.MetaData(bind=con, reflect=True)
     return con, meta
 
 
@@ -318,7 +316,7 @@ def main():
                                 th_table.c.pair == pair).where(
                                 th_table.c.buy_date == date))
 
-                        bot = axxiab.axxiab(TOKEN)
+                        bot = telebot.TeleBot(TOKEN)
                         for i_d in ALLOWED_IDS:
                             bot.send_message(i_d, 'Selling {} {}. Price: {}. Time: {}'.format(
                                 altcoin_amount, pair['name'].split('_')[-1], sell_price, datetime.datetime.now()))
@@ -409,7 +407,7 @@ def main():
                         buy_date=time.time())
                     con.execute(trade)
 
-                    bot = axxiab.axxiab(TOKEN)
+                    bot = telebot.TeleBot(TOKEN)
                     for i_d in ALLOWED_IDS:
                         bot.send_message(i_d, 'Buying {} for {} BTC'.format(pair_info['name'].split('_')[-1],
                                                                             buy_amount))
