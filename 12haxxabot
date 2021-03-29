@@ -1,9 +1,9 @@
 import json
 import datetime
-import logging
-import telebot
-import smtplib
-import sqlalchemy
+import connecting
+import tbot
+import xxaiplib
+import xxaialchemy
 import time
 
 from Bittrex import Bittrex
@@ -20,10 +20,10 @@ PAIRS = ['BTC_ETH', 'BTC_XRP', 'BTC_XEM', 'BTC_LTC', 'BTC_STR', 'BTC_BCN', 'BTC_
          'BTC_PASC', 'BTC_BTM', 'BTC_SBD', 'BTC_VRC', 'BTC_BLK', 'BTC_BCY', 'BTC_XVC', 'BTC_HUC']
 
 BUY_ENSURE_COEF = 1.5
-CANDLE_4H_PERIOD = 14400
-CANDLE_2H_PERIOD = 7200
+CANDLES_4H_PERIOD = 14400
+CANDLES_2H_PERIOD = 7200
 PERIOD_MOD = 3
-CANDLES_NUM = 4 * PERIOD_MOD
+CANDLESS_NUM = 4 * PERIOD_MOD
 HIGHER_COEF = 1.55
 LOWER_COEF = 3.7
 VOL_COEF = 1.9
@@ -34,9 +34,9 @@ TRADE_AMOUNT = 22
 DEPTH_OF_SELLING_GLASS = 200
 STOP_LOSS = 0.75
 TAKE_PROFIT = 1.7
-COEF_ALL_CANDLE_MIN = 2
-COEF_ALL_CANDLE_MID = 3.2
-COEF_ALL_CANDLE_MAX = 5.5
+COEF_ALL_CANDLES_MIN = 2
+COEF_ALL_CANDLES_MID = 3.2
+COEF_ALL_CANDLES_MAX = 5.5
 COEF_HIGH_LOW_MIN = 0.5
 COEF_HIGH_LOW_MAX = 2
 MIN_VOLUME_TO_TRADE = 750
@@ -88,108 +88,108 @@ def create_Bittrex_connection():
     return polo
 
 
-def is_green(candle):
-    return True if candle['close'] >= candle['open'] else False
+def is_green(CANDLES):
+    return True if CANDLES['close'] >= CANDLES['open'] else False
 
 
-def is_dodge(candle):
-    if (candle['high'] - candle['low']) / (
-                abs(candle['close'] - candle['open']) + 0.0001) > COEF_ALL_CANDLE_MAX and COEF_HIGH_LOW_MIN < (
-                candle['high'] - max([candle['close'], candle['open']])) / (
-                    min([candle['close'], candle['open']]) - candle['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
+def is_dodge(CANDLES):
+    if (CANDLES['high'] - CANDLES['low']) / (
+                abs(CANDLES['close'] - CANDLES['open']) + 0.0001) > COEF_ALL_CANDLES_MAX and COEF_HIGH_LOW_MIN < (
+                CANDLES['high'] - max([CANDLES['close'], CANDLES['open']])) / (
+                    min([CANDLES['close'], CANDLES['open']]) - CANDLES['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
         return True
     else:
         return False
 
 
-def is_hummer(candle):
-    higth_part = candle['high'] - max([candle['open'], candle['close']])
-    middle = candle['open'] - candle['close']
-    low_part = min([candle['open'], candle['close']]) - candle['low']
+def is_hummer(CANDLES):
+    higth_part = CANDLES['high'] - max([CANDLES['open'], CANDLES['close']])
+    middle = CANDLES['open'] - CANDLES['close']
+    low_part = min([CANDLES['open'], CANDLES['close']]) - CANDLES['low']
 
     return True if (higth_part + (abs(middle) * HUMMER_MULTIPLIER)) < low_part else False
 
 
-def is_sword(candle):
-    higth_part = candle['high'] - max([candle['open'], candle['close']])
-    middle = candle['open'] - candle['close']
-    low_part = min([candle['open'], candle['close']]) - candle['low']
+def is_sword(CANDLES):
+    higth_part = CANDLES['high'] - max([CANDLES['open'], CANDLES['close']])
+    middle = CANDLES['open'] - CANDLES['close']
+    low_part = min([CANDLES['open'], CANDLES['close']]) - CANDLES['low']
 
     return True if (abs(middle) + (low_part * SWORD_MULTIPLIER)) < higth_part else False
 
 
-def is_simple(candle):
-    return True if not is_dodge(candle) and not is_hummer(candle) and not is_sword(candle) else False
+def is_simple(CANDLES):
+    return True if not is_dodge(CANDLES) and not is_hummer(CANDLES) and not is_sword(CANDLES) else False
 
 
-def is_fat(candle):
-    if COEF_ALL_CANDLE_MID > (candle['high'] - candle['low']) / (
-                abs(candle['close'] - candle['open']) + 0.0001) > COEF_ALL_CANDLE_MIN and COEF_HIGH_LOW_MIN < (
-                candle['high'] - max([candle['close'], candle['open']])) / (
-                    min([candle['close'], candle['open']]) - candle['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
+def is_fat(CANDLES):
+    if COEF_ALL_CANDLES_MID > (CANDLES['high'] - CANDLES['low']) / (
+                abs(CANDLES['close'] - CANDLES['open']) + 0.0001) > COEF_ALL_CANDLES_MIN and COEF_HIGH_LOW_MIN < (
+                CANDLES['high'] - max([CANDLES['close'], CANDLES['open']])) / (
+                    min([CANDLES['close'], CANDLES['open']]) - CANDLES['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
         return True
     else:
         return False
 
 
-def is_raise_vol(candle1, candle2):
-    return True if candle2['volume'] > candle1['volume'] else False
+def is_raise_vol(CANDLES1, CANDLES2):
+    return True if CANDLES2['volume'] > CANDLES1['volume'] else False
 
 
-def candle_12h_creator(candles_data):
-    for i in range(len(candles_data)):
-        if candles_data[0]['date'] % 43200 != 0:
-            candles_data = candles_data[1:]
+def CANDLES_12h_creator(CANDLESs_data):
+    for i in range(len(CANDLESs_data)):
+        if CANDLESs_data[0]['date'] % 43200 != 0:
+            CANDLESs_data = CANDLESs_data[1:]
         else:
             break
-    if len(candles_data) % 3 == 1:
-        candles_data = candles_data[:-1]
-    elif len(candles_data) % 3 == 2:
-        candles_data = candles_data[:-2]
-    elif len(candles_data) % 3 == 0:
-        candles_data = candles_data[:-3]
-    candles_12h_data = []
-    candle_3na4 = []
-    for candle in candles_data:
-        candle_3na4.append(candle)
-        if len(candle_3na4) == 3:
-            candle_12h = {'high': (
-                max([float(candle_3na4[0]['high']), float(candle_3na4[1]['high']), float(candle_3na4[2]['high'])])),
-                'low': (min([float(candle_3na4[0]['low']), float(candle_3na4[1]['low']),
-                             float(candle_3na4[2]['low'])])),
-                'volume': (sum([float(candle_3na4[0]['volume']), float(candle_3na4[1]['volume']),
-                                float(candle_3na4[2]['volume'])])),
-                'close': float(candle_3na4[2]['close']), 'open': float(candle_3na4[0]['open']),
-                'date': int(candle_3na4[0]['date'])}
-            candle_3na4 = []
-            candles_12h_data.append(candle_12h)
+    if len(CANDLESs_data) % 3 == 1:
+        CANDLESs_data = CANDLESs_data[:-1]
+    elif len(CANDLESs_data) % 3 == 2:
+        CANDLESs_data = CANDLESs_data[:-2]
+    elif len(CANDLESs_data) % 3 == 0:
+        CANDLESs_data = CANDLESs_data[:-3]
+    CANDLESs_12h_data = []
+    CANDLES_3na4 = []
+    for CANDLES in CANDLESs_data:
+        CANDLES_3na4.append(CANDLES)
+        if len(CANDLES_3na4) == 3:
+            CANDLES_12h = {'high': (
+                max([float(CANDLES_3na4[0]['high']), float(CANDLES_3na4[1]['high']), float(CANDLES_3na4[2]['high'])])),
+                'low': (min([float(CANDLES_3na4[0]['low']), float(CANDLES_3na4[1]['low']),
+                             float(CANDLES_3na4[2]['low'])])),
+                'volume': (sum([float(CANDLES_3na4[0]['volume']), float(CANDLES_3na4[1]['volume']),
+                                float(CANDLES_3na4[2]['volume'])])),
+                'close': float(CANDLES_3na4[2]['close']), 'open': float(CANDLES_3na4[0]['open']),
+                'date': int(CANDLES_3na4[0]['date'])}
+            CANDLES_3na4 = []
+            CANDLESs_12h_data.append(CANDLES_12h)
 
-    return candles_12h_data
+    return CANDLESs_12h_data
 
 
-def check_hard_condition(candle):
-    candle_close = candle['close']
-    candle_open = candle['open']
-    candle_high = candle['high']
-    candle_low = candle['low']
+def check_hard_condition(CANDLES):
+    CANDLES_close = CANDLES['close']
+    CANDLES_open = CANDLES['open']
+    CANDLES_high = CANDLES['high']
+    CANDLES_low = CANDLES['low']
 
-    if candle_close > candle_open:
-        close_open = candle_close - candle_open
-        high_candle = candle_high - candle_close
-        candle_low = candle_open - candle_low if \
-            candle_open != candle_low else 0.0001
-    elif candle_close < candle_open:
-        close_open = candle_open - candle_close
-        high_candle = candle_high - candle_open
-        candle_low = candle_close - candle_low if \
-            candle_close != candle_low else 0.0001
+    if CANDLES_close > CANDLES_open:
+        close_open = CANDLES_close - CANDLES_open
+        high_CANDLES = CANDLES_high - CANDLES_close
+        CANDLES_low = CANDLES_open - CANDLES_low if \
+            CANDLES_open != CANDLES_low else 0.0001
+    elif CANDLES_close < CANDLES_open:
+        close_open = CANDLES_open - CANDLES_close
+        high_CANDLES = CANDLES_high - CANDLES_open
+        CANDLES_low = CANDLES_close - CANDLES_low if \
+            CANDLES_close != CANDLES_low else 0.0001
     else:
         close_open = 0.0001
-        candle_low = candle_close - candle_low if \
-            candle_close != candle_low else 0.0001
-        high_candle = candle_high - candle_open
-    if high_candle / close_open > HIGHER_COEF \
-            and high_candle / candle_low > LOWER_COEF:
+        CANDLES_low = CANDLES_close - CANDLES_low if \
+            CANDLES_close != CANDLES_low else 0.0001
+        high_CANDLES = CANDLES_high - CANDLES_open
+    if high_CANDLES / close_open > HIGHER_COEF \
+            and high_CANDLES / CANDLES_low > LOWER_COEF:
         return False
     else:
         return True
@@ -198,15 +198,15 @@ def check_hard_condition(candle):
 def main():
     # Connect to Bittrex
     polo = create_Bittrex_connection()
-    logging.basicConfig(level=logging.INFO,
+    connecting.basicConfig(level=connecting.INFO,
                         format='%(asctime)s %(levelname)s %(message)s',
                         datefmt='%H:%M:%S',
-                        filename='{}log/logger{}.log'.format(PROJECT_PATH,
+                        filename='{}log/logger{}.log'.format(PROJECT_PATHS,
                                                              time.strftime('%Y_%m_%d', datetime.datetime.now(
                                                              ).timetuple())))
-    with open(PROJECT_PATH + 'bot_daily_btc_pairs.json') as data_file:
+    with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json') as data_file:
         pairs_bought = json.load(data_file)
-    with open(PROJECT_PATH + 'bot_daily_btc_date.json') as data_file:
+    with open(PROJECT_PATHS + 'bot_daily_btc_date.json') as data_file:
         last_bought_date = json.load(data_file)
     if pairs_bought != '':
         if pairs_bought != 'no pairs':
@@ -226,79 +226,79 @@ def main():
                                 if sell_price != 0:
                                     break
                                 else:
-                                    logging.info('Sell price of {} = 0'.format(pair['name']))
+                                    connecting.info('Sell price of {} = 0'.format(pair['name']))
                             break
                     two_h_data = polo.returnChartData(
-                        pair['name'], period=CANDLE_2H_PERIOD, start=last_bought_date - CANDLE_2H_PERIOD)[:-1]
-                    candles_2h_data = 
+                        pair['name'], period=CANDLES_2H_PERIOD, start=last_bought_date - CANDLES_2H_PERIOD)[:-1]
+                    CANDLESs_2h_data = 
                         [{
-                            'high': float(candle['high']), 
-                            'low': float(candle['low']), 
-                            'volume': float(candle['volume']),
-                            'close': float(candle['close']), 
-                            'open': float(candle['open'])
-                        }for candle in two_h_data
+                            'high': float(CANDLES['high']), 
+                            'low': float(CANDLES['low']), 
+                            'volume': float(CANDLES['volume']),
+                            'close': float(CANDLES['close']), 
+                            'open': float(CANDLES['open'])
+                        }for CANDLES in two_h_data
                         ]
                     
-                    first_candle_condition = True if len(candles_2h_data) == 1 and is_green(
-                        candles_2h_data[0]) and is_hummer(candles_2h_data[0]) else False
+                    first_CANDLES_condition = True if len(CANDLESs_2h_data) == 1 and is_green(
+                        CANDLESs_2h_data[0]) and is_hummer(CANDLESs_2h_data[0]) else False
                     
-                    second_candle_condition = False
-                    if len(candles_2h_data) == 2 and ((is_green(candles_2h_data[0]) and is_green(
-                            candles_2h_data[1]) and ((is_simple(candles_2h_data[0]) and is_simple(
-                        candles_2h_data[1]) and not is_raise_vol(candles_2h_data[0], candles_2h_data[1])) or (
-                                    is_simple(candles_2h_data[0]) and is_dodge(candles_2h_data[1])) or (
-                                        is_sword(candles_2h_data[0]) and is_hummer(
-                                        candles_2h_data[1])))) or (not is_green(candles_2h_data[0]) and is_green(
-                        candles_2h_data[1]) and ((is_simple(candles_2h_data[0]) and is_hummer(
-                        candles_2h_data[1]) and not is_raise_vol(candles_2h_data[0], candles_2h_data[1])) or (
-                                    is_hummer(candles_2h_data[0]) and is_simple(
-                                    candles_2h_data[1]) and not is_raise_vol(
-                                candles_2h_data[0], candles_2h_data[1])))) or (
-                                        not is_green(candles_2h_data[0]) and not is_green(
-                                        candles_2h_data[1]) and is_sword(candles_2h_data[0]) and is_simple(
-                                candles_2h_data[1])) or (is_green(candles_2h_data[0]) and not is_green(
-                                            candles_2h_data[1]) and is_hummer(candles_2h_data[0]) and is_simple(
-                                    candles_2h_data[0]) and not is_raise_vol(candles_2h_data[0], candles_2h_data[1]))):
-                        second_candle_condition = True
+                    second_CANDLES_condition = False
+                    if len(CANDLESs_2h_data) == 2 and ((is_green(CANDLESs_2h_data[0]) and is_green(
+                            CANDLESs_2h_data[1]) and ((is_simple(CANDLESs_2h_data[0]) and is_simple(
+                        CANDLESs_2h_data[1]) and not is_raise_vol(CANDLESs_2h_data[0], CANDLESs_2h_data[1])) or (
+                                    is_simple(CANDLESs_2h_data[0]) and is_dodge(CANDLESs_2h_data[1])) or (
+                                        is_sword(CANDLESs_2h_data[0]) and is_hummer(
+                                        CANDLESs_2h_data[1])))) or (not is_green(CANDLESs_2h_data[0]) and is_green(
+                        CANDLESs_2h_data[1]) and ((is_simple(CANDLESs_2h_data[0]) and is_hummer(
+                        CANDLESs_2h_data[1]) and not is_raise_vol(CANDLESs_2h_data[0], CANDLESs_2h_data[1])) or (
+                                    is_hummer(CANDLESs_2h_data[0]) and is_simple(
+                                    CANDLESs_2h_data[1]) and not is_raise_vol(
+                                CANDLESs_2h_data[0], CANDLESs_2h_data[1])))) or (
+                                        not is_green(CANDLESs_2h_data[0]) and not is_green(
+                                        CANDLESs_2h_data[1]) and is_sword(CANDLESs_2h_data[0]) and is_simple(
+                                CANDLESs_2h_data[1])) or (is_green(CANDLESs_2h_data[0]) and not is_green(
+                                            CANDLESs_2h_data[1]) and is_hummer(CANDLESs_2h_data[0]) and is_simple(
+                                    CANDLESs_2h_data[0]) and not is_raise_vol(CANDLESs_2h_data[0], CANDLESs_2h_data[1]))):
+                        second_CANDLES_condition = True
                         
-                    third_candle_condition = False
-                    if len(candles_2h_data) == 3 and ((is_green(candles_2h_data[0]) and not is_green(
-                            candles_2h_data[1]) and not is_green(candles_2h_data[2]) and is_simple(
-                        candles_2h_data[1]) and ((is_hummer(candles_2h_data[0]) and is_simple(candles_2h_data[2])) or (
-                                is_sword(candles_2h_data[0]) and is_sword(candles_2h_data[2])))) or (
-                                                is_green(candles_2h_data[0]) and not is_green(
-                                                candles_2h_data[1]) and is_green(candles_2h_data[2]) and is_simple(
-                                        candles_2h_data[0]) and is_simple(candles_2h_data[1]) and is_sword(
-                                candles_2h_data[2])) or (
-                                                is_green(candles_2h_data[0]) and is_green(
-                                                candles_2h_data[1]) and is_green(candles_2h_data[2]) and is_simple(
-                                        candles_2h_data[0]) and is_hummer(
-                                    candles_2h_data[1]) and is_simple(candles_2h_data[2]))):
-                        third_candle_condition = True
+                    third_CANDLES_condition = False
+                    if len(CANDLESs_2h_data) == 3 and ((is_green(CANDLESs_2h_data[0]) and not is_green(
+                            CANDLESs_2h_data[1]) and not is_green(CANDLESs_2h_data[2]) and is_simple(
+                        CANDLESs_2h_data[1]) and ((is_hummer(CANDLESs_2h_data[0]) and is_simple(CANDLESs_2h_data[2])) or (
+                                is_sword(CANDLESs_2h_data[0]) and is_sword(CANDLESs_2h_data[2])))) or (
+                                                is_green(CANDLESs_2h_data[0]) and not is_green(
+                                                CANDLESs_2h_data[1]) and is_green(CANDLESs_2h_data[2]) and is_simple(
+                                        CANDLESs_2h_data[0]) and is_simple(CANDLESs_2h_data[1]) and is_sword(
+                                CANDLESs_2h_data[2])) or (
+                                                is_green(CANDLESs_2h_data[0]) and is_green(
+                                                CANDLESs_2h_data[1]) and is_green(CANDLESs_2h_data[2]) and is_simple(
+                                        CANDLESs_2h_data[0]) and is_hummer(
+                                    CANDLESs_2h_data[1]) and is_simple(CANDLESs_2h_data[2]))):
+                        third_CANDLES_condition = True
                         
-                    fourth_candle_condition = False
-                    if len(candles_2h_data) == 4 and ((is_green(candles_2h_data[0]) and is_green(
-                            candles_2h_data[1]) and is_green(candles_2h_data[2]) and is_green(
-                        candles_2h_data[3]) and is_simple(candles_2h_data[0]) and is_simple(
-                        candles_2h_data[1]) and is_hummer(candles_2h_data[2]) and is_sword(candles_2h_data[3])) or (
-                                                is_green(candles_2h_data[0]) and is_green(
-                                                candles_2h_data[1]) and is_green(
-                                            candles_2h_data[2]) and not is_green(
-                                        candles_2h_data[3]) and is_simple(candles_2h_data[0]) and is_simple(
-                                        candles_2h_data[1]) and is_simple(candles_2h_data[2]) and is_sword(
-                                candles_2h_data[3])) or (is_green(candles_2h_data[0]) and is_green(
-                        candles_2h_data[1]) and not is_green(
-                        candles_2h_data[2]) and not is_green(
-                        candles_2h_data[3]) and is_simple(candles_2h_data[0]) and is_simple(
-                        candles_2h_data[1]) and is_simple(candles_2h_data[2]) and is_simple(candles_2h_data[3]))):
-                        fourth_candle_condition = True
+                    fourth_CANDLES_condition = False
+                    if len(CANDLESs_2h_data) == 4 and ((is_green(CANDLESs_2h_data[0]) and is_green(
+                            CANDLESs_2h_data[1]) and is_green(CANDLESs_2h_data[2]) and is_green(
+                        CANDLESs_2h_data[3]) and is_simple(CANDLESs_2h_data[0]) and is_simple(
+                        CANDLESs_2h_data[1]) and is_hummer(CANDLESs_2h_data[2]) and is_sword(CANDLESs_2h_data[3])) or (
+                                                is_green(CANDLESs_2h_data[0]) and is_green(
+                                                CANDLESs_2h_data[1]) and is_green(
+                                            CANDLESs_2h_data[2]) and not is_green(
+                                        CANDLESs_2h_data[3]) and is_simple(CANDLESs_2h_data[0]) and is_simple(
+                                        CANDLESs_2h_data[1]) and is_simple(CANDLESs_2h_data[2]) and is_sword(
+                                CANDLESs_2h_data[3])) or (is_green(CANDLESs_2h_data[0]) and is_green(
+                        CANDLESs_2h_data[1]) and not is_green(
+                        CANDLESs_2h_data[2]) and not is_green(
+                        CANDLESs_2h_data[3]) and is_simple(CANDLESs_2h_data[0]) and is_simple(
+                        CANDLESs_2h_data[1]) and is_simple(CANDLESs_2h_data[2]) and is_simple(CANDLESs_2h_data[3]))):
+                        fourth_CANDLES_condition = True
 
-                    if (time.time() - last_bought_date >= (CANDLE_4H_PERIOD * PERIOD_MOD) or sell_price < STOP_LOSS *
-                        pair['price'] or sell_price > TAKE_PROFIT * pair['price']) or first_candle_condition or \
-                            second_candle_condition or third_candle_condition or fourth_candle_condition:
+                    if (time.time() - last_bought_date >= (CANDLES_4H_PERIOD * PERIOD_MOD) or sell_price < STOP_LOSS *
+                        pair['price'] or sell_price > TAKE_PROFIT * pair['price']) or first_CANDLES_condition or \
+                            second_CANDLES_condition or third_CANDLES_condition or fourth_CANDLES_condition:
                         polo.sell(pair['name'], sell_price, altcoin_amount)
-                        logging.info(
+                        connecting.info(
                             'Selling {} {}. Price: {}'.format(altcoin_amount, pair['name'].split('_')[-1], sell_price))
 
                         gm = Gmail(GMAIL_USER, GMAIL_PASSWORD)
@@ -316,7 +316,7 @@ def main():
                                 th_table.c.pair == pair).where(
                                 th_table.c.buy_date == date))
 
-                        bot = telebot.TeleBot(TOKEN)
+                        bot = tbot.tbot(TOKEN)
                         for i_d in ALLOWED_IDS:
                             bot.send_message(i_d, 'Selling {} {}. Price: {}. Time: {}'.format(
                                 altcoin_amount, pair['name'].split('_')[-1], sell_price, datetime.datetime.now()))
@@ -324,14 +324,14 @@ def main():
                     if float(polo.returnBalances()[pair['name'].split('_')[-1]]) > 0:
                         null_balances_pairs += 1
 
-            if (time.time() - float(last_bought_date)) >= (CANDLE_4H_PERIOD * PERIOD_MOD) and null_balances_pairs == 0:
-                with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
+            if (time.time() - float(last_bought_date)) >= (CANDLES_4H_PERIOD * PERIOD_MOD) and null_balances_pairs == 0:
+                with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json', 'w') as f:
                     json.dump('', f)
         else:
-            if (time.time() - float(last_bought_date)) >= (CANDLE_4H_PERIOD * PERIOD_MOD):
-                with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
+            if (time.time() - float(last_bought_date)) >= (CANDLES_4H_PERIOD * PERIOD_MOD):
+                with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json', 'w') as f:
                     json.dump('', f)
-    with open(PROJECT_PATH + 'bot_daily_btc_pairs.json') as data_file:
+    with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json') as data_file:
         pairs_bought = json.load(data_file)
     if pairs_bought == '':
         pairs_info = []
@@ -340,33 +340,33 @@ def main():
             if currencies_info[pair.split('_')[-1]]['frozen'] == 1 or \
                             currencies_info[pair.split('_')[-1]]['delisted'] == 1:
                 continue
-            candles_data = polo.returnChartData(
-                pair, period=CANDLE_4H_PERIOD, start=int(time.time()) - CANDLE_4H_PERIOD * CANDLES_NUM)
+            CANDLESs_data = polo.returnChartData(
+                pair, period=CANDLES_4H_PERIOD, start=int(time.time()) - CANDLES_4H_PERIOD * CANDLESS_NUM)
             data = [
-                {'high': float(candle['high']), 'low': float(candle['low']), 'volume': float(candle['volume']),
-                 'close': float(candle['close']), 'open': float(candle['open']), 'date': float(candle['date'])}
-                for candle in candles_data
+                {'high': float(CANDLES['high']), 'low': float(CANDLES['low']), 'volume': float(CANDLES['volume']),
+                 'close': float(CANDLES['close']), 'open': float(CANDLES['open']), 'date': float(CANDLES['date'])}
+                for CANDLES in CANDLESs_data
             ]
-            data_12h_candles = candle_12h_creator(data)
+            data_12h_CANDLESs = CANDLES_12h_creator(data)
             if 
-                data_12h_candles[2]['volume'] > MIN_VOLUME_TO_TRADE and data_12h_candles[1]['volume'] > MIN_VOLUME_TO_TRADE 
+                data_12h_CANDLESs[2]['volume'] > MIN_VOLUME_TO_TRADE and data_12h_CANDLESs[1]['volume'] > MIN_VOLUME_TO_TRADE 
             and (
-                    data_12h_candles[1]['close'] > data_12h_candles[1]['open'] or data_12h_candles[2]['close'] > data_12h_candles[2]['open']) 
-            and ((check_hard_condition(data_12h_candles[2]) and MAX_VOL_COEF >
-                    data_12h_candles[2]['volume'] / data_12h_candles[1]['volume'] > VOL_COEF) 
+                    data_12h_CANDLESs[1]['close'] > data_12h_CANDLESs[1]['open'] or data_12h_CANDLESs[2]['close'] > data_12h_CANDLESs[2]['open']) 
+            and ((check_hard_condition(data_12h_CANDLESs[2]) and MAX_VOL_COEF >
+                    data_12h_CANDLESs[2]['volume'] / data_12h_CANDLESs[1]['volume'] > VOL_COEF) 
                 or (
-                        (check_hard_condition(data_12h_candles[1]) 
-                        and MAX_VOL_COEF > data_12h_candles[1]['volume'] / data_12h_candles[0]['volume'] > VOL_COEF) 
-                        and (is_dodge(data_12h_candles[2]) or is_fat(data_12h_candles[2]))
+                        (check_hard_condition(data_12h_CANDLESs[1]) 
+                        and MAX_VOL_COEF > data_12h_CANDLESs[1]['volume'] / data_12h_CANDLESs[0]['volume'] > VOL_COEF) 
+                        and (is_dodge(data_12h_CANDLESs[2]) or is_fat(data_12h_CANDLESs[2]))
                     )
                 ):
                 pairs_info.append({
                     'name': pair,
-                    'coef': data_12h_candles[1]['volume'] / data_12h_candles[0]['volume'],
-                    'last_volume': data_12h_candles[1]['volume'],
-                    'previous_volume': data_12h_candles[0]['volume'],
+                    'coef': data_12h_CANDLESs[1]['volume'] / data_12h_CANDLESs[0]['volume'],
+                    'last_volume': data_12h_CANDLESs[1]['volume'],
+                    'previous_volume': data_12h_CANDLESs[0]['volume'],
                 })
-        logging.info('Number of pairs: {}'.format(len(pairs_info)))
+        connecting.info('Number of pairs: {}'.format(len(pairs_info)))
         pairs_info = sorted(pairs_info, key=lambda k: k['coef'], reverse=True)[:NUM_OF_PAIRS] if len(
             pairs_info) >= MIN_PAIRS else []
         balances = polo.returnBalances()
@@ -388,7 +388,7 @@ def main():
                         break
                 if order_price:
                     polo.buy(pair_info['name'], order_price, buy_amount / order_price)
-                    logging.info('Buying {} for {} BTC'.format(pair_info['name'].split('_')[-1], buy_amount))
+                    connecting.info('Buying {} for {} BTC'.format(pair_info['name'].split('_')[-1], buy_amount))
                     pair_info['price'] = order_price
 
                     gm = Gmail(GMAIL_USER, GMAIL_PASSWORD)
@@ -407,22 +407,22 @@ def main():
                         buy_date=time.time())
                     con.execute(trade)
 
-                    bot = telebot.TeleBot(TOKEN)
+                    bot = tbot.tbot(TOKEN)
                     for i_d in ALLOWED_IDS:
                         bot.send_message(i_d, 'Buying {} for {} BTC'.format(pair_info['name'].split('_')[-1],
                                                                             buy_amount))
 
-            with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
+            with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json', 'w') as f:
                 json.dump([{'name': p['name'], 'price': p['price']} for p in pairs_info], f)
         else:
-            with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
+            with open(PROJECT_PATHS + 'bot_daily_btc_pairs.json', 'w') as f:
                 json.dump('no pairs', f)
-        with open(PROJECT_PATH + 'bot_daily_btc_date.json', 'w') as f:
-            json.dump((int(time.time())//CANDLE_2H_PERIOD) * CANDLE_2H_PERIOD + 60, f)
+        with open(PROJECT_PATHS + 'bot_daily_btc_date.json', 'w') as f:
+            json.dump((int(time.time())//CANDLES_2H_PERIOD) * CANDLES_2H_PERIOD + 60, f)
 
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        logging.exception('message')
+        connecting.exception('message')
