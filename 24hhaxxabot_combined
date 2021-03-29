@@ -1,3 +1,4 @@
+  
 import json
 import datetime
 import smtplib
@@ -17,9 +18,9 @@ PAIRS = ['BTC_ETH', 'BTC_XRP', 'BTC_XEM', 'BTC_LTC', 'BTC_STR', 'BTC_BCN', 'BTC_
          'BTC_PASC', 'BTC_BTM', 'BTC_SBD', 'BTC_VRC', 'BTC_BLK', 'BTC_BCY', 'BTC_XVC', 'BTC_HUC']
 
 BUY_ENSURE_COEF = 1.5
-CANDLE_PERIOD = 86400
-CANDLE_4H_PERIOD = 14400
-CANDLES_NUM = 4
+CANDLES_PERIOD = 86400
+CANDLES_4H_PERIOD = 14400
+CANDLESS_NUM = 4
 HIGHER_COEF = 1.68
 LOWER_COEF = 3
 VOL_COEF = 1.8
@@ -30,9 +31,9 @@ TRADE_AMOUNT = 21
 DEPTH_OF_SELLING_GLASS = 200
 STOP_LOSS = 0.75
 TAKE_PROFIT = 1.6
-COEF_ALL_CANDLE_MIN = 1.5
-COEF_ALL_CANDLE_MID = 3.2
-COEF_ALL_CANDLE_MAX = 5.8
+COEF_ALL_CANDLES_MIN = 1.5
+COEF_ALL_CANDLES_MID = 3.2
+COEF_ALL_CANDLES_MAX = 5.8
 COEF_HIGH_LOW_MIN = 0.5
 COEF_HIGH_LOW_MAX = 2
 MIN_VOLUME_TO_TRADE = 800
@@ -75,73 +76,73 @@ def create_Bittrex_connection():
     return polo
 
 
-def is_green(candle):
-    return True if candle['close'] >= candle['open'] else False
+def is_green(CANDLES):
+    return True if CANDLES['close'] >= CANDLES['open'] else False
 
 
-def is_dodge(candle):
-    if (candle['high'] - candle['low']) / (
-                abs(candle['close'] - candle['open']) + 0.0001) > COEF_ALL_CANDLE_MAX and COEF_HIGH_LOW_MIN < (
-                candle['high'] - max([candle['close'], candle['open']])) / (
-                    min([candle['close'], candle['open']]) - candle['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
+def is_dodge(CANDLES):
+    if (CANDLES['high'] - CANDLES['low']) / (
+                abs(CANDLES['close'] - CANDLES['open']) + 0.0001) > COEF_ALL_CANDLES_MAX and COEF_HIGH_LOW_MIN < (
+                CANDLES['high'] - max([CANDLES['close'], CANDLES['open']])) / (
+                    min([CANDLES['close'], CANDLES['open']]) - CANDLES['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
         return True
     else:
         return False
 
 
-def is_hummer(candle):
-    higth_part = candle['high'] - max([candle['open'], candle['close']])
-    middle = candle['open'] - candle['close']
-    low_part = min([candle['open'], candle['close']]) - candle['low']
+def is_hummer(CANDLES):
+    higth_part = CANDLES['high'] - max([CANDLES['open'], CANDLES['close']])
+    middle = CANDLES['open'] - CANDLES['close']
+    low_part = min([CANDLES['open'], CANDLES['close']]) - CANDLES['low']
 
     return True if (higth_part + (abs(middle) * HUMMER_MULTIPLIER)) < low_part else False
 
 
-def is_sword(candle):
-    higth_part = candle['high'] - max([candle['open'], candle['close']])
-    middle = candle['open'] - candle['close']
-    low_part = min([candle['open'], candle['close']]) - candle['low']
+def is_sword(CANDLES):
+    higth_part = CANDLES['high'] - max([CANDLES['open'], CANDLES['close']])
+    middle = CANDLES['open'] - CANDLES['close']
+    low_part = min([CANDLES['open'], CANDLES['close']]) - CANDLES['low']
 
     return True if (abs(middle) + (low_part * SWORD_MULTIPLIER)) < higth_part else False
 
 
-def is_simple(candle):
-    return True if not is_dodge(candle) and not is_hummer(candle) and not is_sword(candle) else False
+def is_simple(CANDLES):
+    return True if not is_dodge(CANDLES) and not is_hummer(CANDLES) and not is_sword(CANDLES) else False
 
 
-def is_fat(candle):
-    if COEF_ALL_CANDLE_MID > (candle['high'] - candle['low']) / (
-                abs(candle['close'] - candle['open']) + 0.0001) > COEF_ALL_CANDLE_MIN and COEF_HIGH_LOW_MIN < (
-                candle['high'] - max([candle['close'], candle['open']])) / (
-                    min([candle['close'], candle['open']]) - candle['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
+def is_fat(CANDLES):
+    if COEF_ALL_CANDLES_MID > (CANDLES['high'] - CANDLES['low']) / (
+                abs(CANDLES['close'] - CANDLES['open']) + 0.0001) > COEF_ALL_CANDLES_MIN and COEF_HIGH_LOW_MIN < (
+                CANDLES['high'] - max([CANDLES['close'], CANDLES['open']])) / (
+                    min([CANDLES['close'], CANDLES['open']]) - CANDLES['low'] + 0.0001) < COEF_HIGH_LOW_MAX:
         return True
     else:
         return False
 
 
-def check_hard_condition(candle):
-    candle_close = candle['close']
-    candle_open = candle['open']
-    candle_high = candle['high']
-    candle_low = candle['low']
+def check_hard_condition(CANDLES):
+    CANDLES_close = CANDLES['close']
+    CANDLES_open = CANDLES['open']
+    CANDLES_high = CANDLES['high']
+    CANDLES_low = CANDLES['low']
 
-    if candle_close > candle_open:
-        close_open = candle_close - candle_open
-        high_candle = candle_high - candle_close
-        candle_low = candle_open - candle_low if \
-            candle_open != candle_low else 0.0001
-    elif candle_close < candle_open:
-        close_open = candle_open - candle_close
-        high_candle = candle_high - candle_open
-        candle_low = candle_close - candle_low if \
-            candle_close != candle_low else 0.0001
+    if CANDLES_close > CANDLES_open:
+        close_open = CANDLES_close - CANDLES_open
+        high_CANDLES = CANDLES_high - CANDLES_close
+        CANDLES_low = CANDLES_open - CANDLES_low if \
+            CANDLES_open != CANDLES_low else 0.0001
+    elif CANDLES_close < CANDLES_open:
+        close_open = CANDLES_open - CANDLES_close
+        high_CANDLES = CANDLES_high - CANDLES_open
+        CANDLES_low = CANDLES_close - CANDLES_low if \
+            CANDLES_close != CANDLES_low else 0.0001
     else:
         close_open = 0.0001
-        candle_low = candle_close - candle_low if \
-            candle_close != candle_low else 0.0001
-        high_candle = candle_high - candle_open
-    if high_candle / close_open > HIGHER_COEF \
-            and high_candle / candle_low > LOWER_COEF:
+        CANDLES_low = CANDLES_close - CANDLES_low if \
+            CANDLES_close != CANDLES_low else 0.0001
+        high_CANDLES = CANDLES_high - CANDLES_open
+    if high_CANDLES / close_open > HIGHER_COEF \
+            and high_CANDLES / CANDLES_low > LOWER_COEF:
         return False
     else:
         return True
@@ -180,32 +181,32 @@ def main():
                                 logging.info('Sell price of {} = 0'.format(pair['name']))
                         break
                 four_h_data = polo.returnChartData(
-                    pair['name'], period=CANDLE_4H_PERIOD, start=last_bought_date - CANDLE_4H_PERIOD)[:-1]
-                candles_4h_data = [
-                    {'high': float(candle['high']), 'low': float(candle['low']), 'volume': float(candle['volume']),
-                     'close': float(candle['close']), 'open': float(candle['open'])}
-                    for candle in four_h_data
+                    pair['name'], period=CANDLES_4H_PERIOD, start=last_bought_date - CANDLES_4H_PERIOD)[:-1]
+                CANDLESs_4h_data = [
+                    {'high': float(CANDLES['high']), 'low': float(CANDLES['low']), 'volume': float(CANDLES['volume']),
+                     'close': float(CANDLES['close']), 'open': float(CANDLES['open'])}
+                    for CANDLES in four_h_data
                 ]
-                first_candle_condition = True if len(candles_4h_data) == 1 and not is_dodge(
-                    candles_4h_data[0]) and is_sword(candles_4h_data[0]) else False
-                second_candle_condition = False
-                third_candle_condition = True if len(candles_4h_data) == 3 and not is_green(
-                    candles_4h_data[-1]) and is_green(candles_4h_data[-2]) else False
-                if len(candles_4h_data) == 2 and ((is_green(candles_4h_data[0]) and not is_green(
-                        candles_4h_data[1]) and ((is_simple(candles_4h_data[0]) and is_hummer(candles_4h_data[1])) or (
-                                            is_simple(candles_4h_data[0]) and is_sword(candles_4h_data[1])) or (
-                            is_hummer(candles_4h_data[0]) and is_simple(candles_4h_data[1])) or (
-                            is_sword(candles_4h_data[0]) and is_simple(candles_4h_data[1])) or (
-                            is_dodge(candles_4h_data[0]) and is_simple(candles_4h_data[1])))) or (
-                                not is_green(candles_4h_data[0]) and not is_green(candles_4h_data[1]) and (
-                            (is_simple(candles_4h_data[0]) and is_simple(candles_4h_data[1])) or (
-                                        is_hummer(candles_4h_data[0]) and is_simple(candles_4h_data[1])) or (
-                                        is_sword(candles_4h_data[0]) and is_simple(candles_4h_data[1]))))):
-                    second_candle_condition = True
+                first_CANDLES_condition = True if len(CANDLESs_4h_data) == 1 and not is_dodge(
+                    CANDLESs_4h_data[0]) and is_sword(CANDLESs_4h_data[0]) else False
+                second_CANDLES_condition = False
+                third_CANDLES_condition = True if len(CANDLESs_4h_data) == 3 and not is_green(
+                    CANDLESs_4h_data[-1]) and is_green(CANDLESs_4h_data[-2]) else False
+                if len(CANDLESs_4h_data) == 2 and ((is_green(CANDLESs_4h_data[0]) and not is_green(
+                        CANDLESs_4h_data[1]) and ((is_simple(CANDLESs_4h_data[0]) and is_hummer(CANDLESs_4h_data[1])) or (
+                                            is_simple(CANDLESs_4h_data[0]) and is_sword(CANDLESs_4h_data[1])) or (
+                            is_hummer(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1])) or (
+                            is_sword(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1])) or (
+                            is_dodge(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1])))) or (
+                                not is_green(CANDLESs_4h_data[0]) and not is_green(CANDLESs_4h_data[1]) and (
+                            (is_simple(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1])) or (
+                                        is_hummer(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1])) or (
+                                        is_sword(CANDLESs_4h_data[0]) and is_simple(CANDLESs_4h_data[1]))))):
+                    second_CANDLES_condition = True
                 if altcoin_amount > 0 and \
-                        (time.time() - last_bought_date >= CANDLE_PERIOD or sell_price < STOP_LOSS * pair['price']
-                         or sell_price > TAKE_PROFIT * pair['price'] or first_candle_condition
-                         or second_candle_condition or third_candle_condition):
+                        (time.time() - last_bought_date >= CANDLES_PERIOD or sell_price < STOP_LOSS * pair['price']
+                         or sell_price > TAKE_PROFIT * pair['price'] or first_CANDLES_condition
+                         or second_CANDLES_condition or third_CANDLES_condition):
                     polo.sell(pair['name'], sell_price, altcoin_amount)
                     logging.info(
                         'Selling {} {}. Price: {}'.format(altcoin_amount, pair['name'].split('_')[-1], sell_price))
@@ -216,11 +217,11 @@ def main():
                 if float(polo.returnBalances()[pair['name'].split('_')[-1]]) > 0:
                     null_balances_pairs += 1
 
-            if (time.time() - float(last_bought_date)) >= CANDLE_PERIOD and null_balances_pairs == 0:
+            if (time.time() - float(last_bought_date)) >= CANDLES_PERIOD and null_balances_pairs == 0:
                 with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
                     json.dump('', f)
         else:
-            if (time.time() - float(last_bought_date)) >= CANDLE_PERIOD:
+            if (time.time() - float(last_bought_date)) >= CANDLES_PERIOD:
                 with open(PROJECT_PATH + 'bot_daily_btc_pairs.json', 'w') as f:
                     json.dump('', f)
     with open(PROJECT_PATH + 'bot_daily_btc_pairs.json') as data_file:
@@ -228,12 +229,12 @@ def main():
     if pairs_bought == '':
         pairs_info = []
         for pair in PAIRS:
-            candles_data = polo.returnChartData(
-                pair, period=CANDLE_PERIOD, start=int(time.time()) - CANDLE_PERIOD * CANDLES_NUM)[:-1]
+            CANDLESs_data = polo.returnChartData(
+                pair, period=CANDLES_PERIOD, start=int(time.time()) - CANDLES_PERIOD * CANDLESS_NUM)[:-1]
             data = [
-                {'high': float(candle['high']), 'low': float(candle['low']), 'volume': float(candle['volume']),
-                 'close': float(candle['close']), 'open': float(candle['open'])}
-                for candle in candles_data
+                {'high': float(CANDLES['high']), 'low': float(CANDLES['low']), 'volume': float(CANDLES['volume']),
+                 'close': float(CANDLES['close']), 'open': float(CANDLES['open'])}
+                for CANDLES in CANDLESs_data
             ]
             if data[2]['volume'] > MIN_VOLUME_TO_TRADE and data[1]['volume'] > MIN_VOLUME_TO_TRADE and (
                             data[1]['close'] > data[1]['open'] or data[2]['close'] > data[2]['open']) and (
